@@ -13,30 +13,36 @@ ARG GH_VERSION=2.74.1
 
 USER root
 
-RUN dnf -y install \
+RUN ARCH=$(uname -m) && \
+    GOARCH=$(echo ${ARCH} | sed 's/x86_64/amd64/;s/aarch64/arm64/') && \
+    GHARCH=${GOARCH} && \
+    K9SARCH=$(echo ${ARCH} | sed 's/x86_64/amd64/;s/aarch64/arm64/') && \
+    OPENSHELL_ARCH=$(echo ${ARCH} | sed 's/aarch64/aarch64/') && \
+# System packages
+    dnf -y install \
         bind-utils hostname jq make \
     && dnf -y clean all \
     && rm -rf /var/cache /var/log/dnf* && \
 # Go
-    curl -LsSf "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" \
+    curl -LsSf "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" \
         | tar -C /usr/local -xzf - && \
     ln -s /usr/local/go/bin/go /usr/local/bin/go && \
     ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt && \
-# golangci-lint
+# golangci-lint (install script auto-detects arch)
     curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh \
         | sh -s -- -b /usr/local/bin ${GOLANGCI_LINT_VERSION} && \
 # OpenShell CLI
-    curl -LsSf https://github.com/NVIDIA/OpenShell/releases/latest/download/openshell-x86_64-unknown-linux-musl.tar.gz \
+    curl -LsSf "https://github.com/NVIDIA/OpenShell/releases/latest/download/openshell-${ARCH}-unknown-linux-musl.tar.gz" \
         | tar xz -C /usr/local/bin/ && \
 # k9s
-    curl -LsSf "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz" \
+    curl -LsSf "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_${K9SARCH}.tar.gz" \
         | tar xz -C /usr/local/bin/ k9s && \
 # gh CLI
-    TARBALL="gh_${GH_VERSION}_linux_amd64.tar.gz" && \
+    TARBALL="gh_${GH_VERSION}_linux_${GHARCH}.tar.gz" && \
     curl -fsSL -o "/tmp/${TARBALL}" \
         "https://github.com/cli/cli/releases/download/v${GH_VERSION}/${TARBALL}" && \
     tar -xzf "/tmp/${TARBALL}" -C /usr/local/bin \
-        --strip-components=2 "gh_${GH_VERSION}_linux_amd64/bin/gh" && \
+        --strip-components=2 "gh_${GH_VERSION}_linux_${GHARCH}/bin/gh" && \
     rm "/tmp/${TARBALL}" && \
 # Prompt
     echo "git_branch() { git branch 2>/dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1)/'; }" \
