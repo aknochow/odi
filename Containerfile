@@ -14,7 +14,7 @@ ARG GH_VERSION=2.74.1
 USER root
 
 RUN dnf -y install \
-        bind-utils hostname jq make neofetch \
+        bind-utils hostname jq make \
     && dnf -y clean all \
     && rm -rf /var/cache /var/log/dnf* && \
 # Go
