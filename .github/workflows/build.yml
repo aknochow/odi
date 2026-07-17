@@ -70,8 +70,56 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  manifest:
+  smoke-test:
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Login to Quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+
+      - name: Download digest
+        uses: actions/download-artifact@v4
+        with:
+          name: digest-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          path: /tmp/digests
+
+      - name: Smoke test
+        run: |
+          DIGEST="sha256:$(ls /tmp/digests)"
+          IMAGE_REF="${IMAGE}@${DIGEST}"
+          echo "Testing ${IMAGE_REF}"
+
+          docker run --rm "${IMAGE_REF}" sh -c '
+            set -e
+            echo "--- Go ---"         && go version
+            echo "--- golangci-lint ---" && golangci-lint version
+            echo "--- k9s ---"         && k9s version --short
+            echo "--- gh ---"          && gh --version
+            echo "--- jq ---"          && jq --version
+            echo "--- make ---"        && make --version | head -1
+            echo "--- git ---"         && git --version
+            echo "--- openshell ---"   && openshell --version
+            echo "All tools OK"
+          '
+
+  manifest:
+    needs: [build, smoke-test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
