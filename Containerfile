@@ -4,7 +4,7 @@
 # Build:  podman build -t quay.io/aknochow/odi:latest .
 # Push:   podman push quay.io/aknochow/odi:latest
 
-FROM quay.io/devfile/universal-developer-image:ubi10-latest
+FROM quay.io/devfile/base-developer-image:ubi10-latest
 
 ARG GO_VERSION=1.24.5
 ARG GOLANGCI_LINT_VERSION=v2.1.0
@@ -19,8 +19,8 @@ RUN ARCH=$(uname -m) && \
     K9SARCH=$(echo ${ARCH} | sed 's/x86_64/amd64/;s/aarch64/arm64/') && \
     OPENSHELL_ARCH=$(echo ${ARCH} | sed 's/aarch64/aarch64/') && \
 # System packages
-    dnf -y install \
-        bind-utils hostname jq make \
+    dnf -y --disablerepo=epel install \
+        bind-utils hostname make \
     && dnf -y clean all \
     && rm -rf /var/cache /var/log/dnf* && \
 # Go
